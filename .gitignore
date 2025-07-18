@@ -1,1 +1,5 @@
 /node_modules/
+/raw_text/
+/trans_miss/
+/trans_text/
+.env

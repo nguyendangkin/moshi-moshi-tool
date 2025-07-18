@@ -40,7 +40,21 @@ async function main() {
             const filePath = path.join(inputDir, file);
             const content = await fs.readFile(filePath, "utf-8");
 
-            const prompt = `Việt hóa phần Text được hiển thị. Giữ nguyên định dạng, cấu trúc file, số lượng các tag, biến:\n${content}`;
+            const prompt = `
+Dịch các dòng localization của game từ tiếng Anh sang tiếng Việt.
+Quy tắc:
+- Giữ nguyên tất cả các dòng, thứ tự và định dạng.
+- Giữ nguyên các dòng không bắt đầu bằng "Text=" (ví dụ: SelfId=, [~NAMES-INCLUDED~], ...).
+- Chỉ dịch phần nội dung sau "Text=".
+- Bảo toàn TẤT CẢ các token/thẻ: {VAR}, <If...(...)>, <KEY_WAIT>, <cf>, <NO_INPUT>, <--->, v.v.
+- Dịch các đối số bên trong thẻ <If...(..., ...)> riêng biệt; giữ nguyên số lượng và dấu phẩy.
+- Không thêm khoảng trắng dư thừa, không dùng markdown, không bọc trong dấu ngoặc kép.
+- Ưu tiên tính tự nhiên, rõ ràng; các trò chơi chữ slime trong tiếng Anh có thể dịch bình thường nếu khó hiểu.
+- "(slurp)" -> hiệu ứng âm thanh tiếng Việt tự nhiên "(nuốt nước bọt)".
+Chỉ trả về nội dung file đã dịch, KHÔNG thêm gì khác.
+
+${content}
+`;
 
             console.log(chalk.blue(`Đang dịch: ${file}`));
 
@@ -65,8 +79,8 @@ async function main() {
             );
 
             // check: bản dịch so với bản gốc
-            console.log(chalk.blue(`Đang check: ${file}`));
             const issues = checkGameTranslation(content, translated);
+            console.log(chalk.blue(`Check xong: ${file}`));
             if (issues.length === 1 && issues[0].startsWith("OK:")) {
                 // Thành công
                 await fs.writeFile(outputFile, translated, "utf-8");
@@ -78,16 +92,12 @@ async function main() {
             } else {
                 // thất bại
                 console.log(
-                    chalk.red(
-                        `Phát hiện ${issues.length} vấn đề trong file "${file}"`
-                    )
+                    chalk.red(`Phát hiện ${issues.length} vấn đề với "${file}"`)
                 );
                 await fs.writeFile(outputFileMiss, translated, "utf-8");
+                console.log(chalk.red(`Bản dịch có vấn đề: ${outputFileMiss}`));
                 console.log(
-                    chalk.red(`Có vấn đề cần kiểm tra: ${outputFileMiss}`)
-                );
-                console.log(
-                    chalk.red(`Đã xuất log các vấn đề: ${outputFileMissLog}`)
+                    chalk.red(`Đã ghi log vấn đề vào: ${outputFileMissLog}`)
                 );
                 // ghi log vào file log
                 await fs.writeFile(
@@ -98,7 +108,7 @@ async function main() {
             }
         }
 
-        console.log(chalk.green("Đã hoàn thành!"));
+        console.log("Đã hoàn thành.");
     } catch (error) {
         console.error(error.message || error);
     }
