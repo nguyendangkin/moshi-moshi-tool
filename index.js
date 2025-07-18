@@ -2,6 +2,7 @@ import chalk from "chalk";
 import gemini from "./modules/gemini/gemini.js";
 import fs from "fs-extra";
 import path from "path";
+import ora from "ora";
 import checkGameTranslation from "./modules/validateText/validateTranslation.js";
 
 const inputDir = path.join(process.cwd(), "raw_text");
@@ -56,13 +57,16 @@ Chỉ trả về nội dung file đã dịch, KHÔNG thêm gì khác.
 ${content}
 `;
 
-            console.log(chalk.blue(`Đang dịch: ${file}`));
+            const spinner = ora(`Đang dịch file: ${file}`).start();
 
             const translated = await gemini(prompt);
+
             if (!translated) {
-                console.log(chalk.red(`Không dịch được file: ${file}`));
+                spinner.fail(`Không dịch được file: ${file}`);
                 continue;
             }
+
+            spinner.succeed(`Dịch xong file: ${file}`);
 
             const outputFile = path.join(
                 outputDir,
@@ -92,12 +96,16 @@ ${content}
             } else {
                 // thất bại
                 console.log(
-                    chalk.red(`Phát hiện ${issues.length} vấn đề với "${file}"`)
+                    chalk.red(
+                        `- Phát hiện ${issues.length} vấn đề với "${file}"`
+                    )
                 );
                 await fs.writeFile(outputFileMiss, translated, "utf-8");
-                console.log(chalk.red(`Bản dịch có vấn đề: ${outputFileMiss}`));
                 console.log(
-                    chalk.red(`Đã ghi log vấn đề vào: ${outputFileMissLog}`)
+                    chalk.red(`- Bản dịch có vấn đề: ${outputFileMiss}`)
+                );
+                console.log(
+                    chalk.red(`- Đã ghi log vấn đề vào: ${outputFileMissLog}`)
                 );
                 // ghi log vào file log
                 await fs.writeFile(

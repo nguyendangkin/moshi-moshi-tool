@@ -1,16 +1,21 @@
 function validateTranslation(content, translated) {
-    const originalLines = content.split(/\r?\n/);
-    const translatedLines = translated.split(/\r?\n/);
+    let originalLines = content.split(/\r?\n/);
+    let translatedLines = translated.split(/\r?\n/);
 
     const issues = [];
 
-    // --- helper: cắt dòng gọn để hiển thị trong log ---
-    function snippet(str, max = 80) {
-        const s = str.trim();
-        return s.length > max ? s.slice(0, max - 3) + "..." : s;
+    // Bỏ mọi dòng TRẮNG ở cuối mảng trước khi so sánh
+    function trimTrailingEmptyLines(arr) {
+        while (arr.length > 0 && arr[arr.length - 1].trim() === "") {
+            arr.pop();
+        }
+        return arr;
     }
 
-    // 1. Kiểm tra số lượng dòng
+    originalLines = trimTrailingEmptyLines(originalLines);
+    translatedLines = trimTrailingEmptyLines(translatedLines);
+
+    // 1. Kiểm tra số lượng dòng (sau khi trim dòng trắng cuối)
     if (originalLines.length !== translatedLines.length) {
         issues.push(
             `Số dòng khác nhau: bản gốc = ${originalLines.length}, bản dịch = ${translatedLines.length}.`
@@ -39,19 +44,16 @@ function validateTranslation(content, translated) {
      * Chuẩn hoá tag để so sánh:
      * - <Something(foo,bar)>  -> <Something>
      * - <Cap>                  -> <Cap>
-     * - {VALUE}                -> {VALUE}  (giữ nguyên, KHÔNG dịch)
-     * - [3]                    -> [3]      (giữ nguyên)
+     * - {VALUE}                -> {VALUE}
+     * - [3]                    -> [3]
      */
     function canonicalTag(tag) {
         if (tag.startsWith("<")) {
-            // bỏ dấu < >
             const inner = tag.slice(1, -1).trim();
-            // lấy tên đến trước '(' hoặc khoảng trắng
             const m = inner.match(/^([A-Za-z0-9_]+)/);
             const name = m ? m[1] : inner; // fallback nếu không match
             return `<${name}>`;
         }
-        // ngoặc nhọn / vuông: không đổi
         return tag;
     }
 
@@ -88,8 +90,8 @@ function validateTranslation(content, translated) {
                         `Dòng ${
                             i + 1
                         } (bản dịch) thiếu tag "${tag}" — bản gốc: ${oc} | bản dịch: ${tc}.` +
-                            `\n  bản gốc : ${snippet(oLine)}` +
-                            `\n  bản dịch: ${snippet(tLine)}`
+                            `\n  bản gốc : ${oLine}` +
+                            `\n  bản dịch: ${tLine}`
                     );
                 } else {
                     // bản dịch thừa tag
@@ -97,8 +99,8 @@ function validateTranslation(content, translated) {
                         `Dòng ${
                             i + 1
                         } (bản dịch) thừa tag "${tag}" — bản gốc: ${oc} | bản dịch: ${tc}.` +
-                            `\n  bản gốc : ${snippet(oLine)}` +
-                            `\n  bản dịch: ${snippet(tLine)}`
+                            `\n  bản gốc : ${oLine}` +
+                            `\n  bản dịch: ${tLine}`
                     );
                 }
             }
@@ -114,16 +116,16 @@ function validateTranslation(content, translated) {
                     `Dòng ${
                         i + 1
                     } (bản dịch) có SelfId="${tSelf}" nhưng bản gốc không có SelfId hợp lệ (phải "SelfId=GIATRI").` +
-                        `\n  bản gốc : ${snippet(oLine)}` +
-                        `\n  bản dịch: ${snippet(tLine)}`
+                        `\n  bản gốc : ${oLine}` +
+                        `\n  bản dịch: ${tLine}`
                 );
             } else if (oSelf !== tSelf) {
                 issues.push(
                     `Dòng ${
                         i + 1
                     }: SelfId không khớp — bản gốc: "${oSelf}" | bản dịch: "${tSelf}".` +
-                        `\n  bản gốc : ${snippet(oLine)}` +
-                        `\n  bản dịch: ${snippet(tLine)}`
+                        `\n  bản gốc : ${oLine}` +
+                        `\n  bản dịch: ${tLine}`
                 );
             }
         } else if (oSelf !== null) {
@@ -131,8 +133,8 @@ function validateTranslation(content, translated) {
                 `Dòng ${
                     i + 1
                 } (bản dịch) thiếu SelfId="${oSelf}" hoặc sai định dạng (phải "SelfId=GIATRI").` +
-                    `\n  bản gốc : ${snippet(oLine)}` +
-                    `\n  bản dịch: ${snippet(tLine)}`
+                    `\n  bản gốc : ${oLine}` +
+                    `\n  bản dịch: ${tLine}`
             );
         }
 
@@ -144,16 +146,16 @@ function validateTranslation(content, translated) {
                 `Dòng ${
                     i + 1
                 } (bản dịch) thiếu khóa "Text=" (bản gốc có). Có thể gõ sai như "Texdt=" hoặc thiếu '='.` +
-                    `\n  bản gốc : ${snippet(oLine)}` +
-                    `\n  bản dịch: ${snippet(tLine)}`
+                    `\n  bản gốc : ${oLine}` +
+                    `\n  bản dịch: ${tLine}`
             );
         } else if (!oHasText && tHasText) {
             issues.push(
                 `Dòng ${
                     i + 1
                 } (bản dịch) có "Text=" nhưng bản gốc không có — lệch cấu trúc.` +
-                    `\n  bản gốc : ${snippet(oLine)}` +
-                    `\n  bản dịch: ${snippet(tLine)}`
+                    `\n  bản gốc : ${oLine}` +
+                    `\n  bản dịch: ${tLine}`
             );
         }
     }
