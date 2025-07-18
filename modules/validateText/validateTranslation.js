@@ -7,7 +7,7 @@ function validateTranslation(content, translated) {
     // 1. Kiểm tra số lượng dòng
     if (originalLines.length !== translatedLines.length) {
         issues.push(
-            `Số dòng khác nhau: Gốc = ${originalLines.length}, Dịch = ${translatedLines.length}`
+            `Số dòng khác nhau: bản gốc = ${originalLines.length}, bản dịch = ${translatedLines.length}.`
         );
     }
 
@@ -15,13 +15,9 @@ function validateTranslation(content, translated) {
     const tagRegex = /<[^>]+>|\{[^}]+\}|\[[^\]]+\]/g;
 
     // 3. Regex SelfId CHUẨN: KHÔNG khoảng trắng sau '='
-    //    Ví dụ hợp lệ:  SelfId=Txt_ABC
-    //    Ví dụ lỗi:     SelfId= Txt_ABC  (có khoảng trắng)
-    const selfIdRegex = /SelfId=([^\s]+)/; // nếu muốn không phân biệt hoa/thường: /SelfId=([^\s]+)/i
+    const selfIdRegex = /SelfId=([^\s]+)/; // case-sensitive
 
     // 3b. Regex Text= CHUẨN: KHÔNG khoảng trắng quanh '='
-    //     Ví dụ hợp lệ:  Text=Hello
-    //     Ví dụ lỗi:     Text =Hello, Texdt=Hello, v.v.
     const textKeyRegex = /^Text=/;
 
     function getSelfId(line) {
@@ -59,9 +55,25 @@ function validateTranslation(content, translated) {
             const oc = oMap[tag] || 0;
             const tc = tMap[tag] || 0;
             if (oc !== tc) {
-                issues.push(
-                    `Dòng ${i + 1}: Tag "${tag}" (Gốc: ${oc}, Dịch: ${tc})`
-                );
+                if (oc > tc) {
+                    // bản dịch thiếu tag có trong bản gốc
+                    issues.push(
+                        `Dòng ${
+                            i + 1
+                        } (bản dịch) thiếu tag "${tag}" — bản gốc: ${oc} | bản dịch: ${tc}.` +
+                            `\n  bản gốc : ${oLine}` +
+                            `\n  bản dịch: ${tLine}`
+                    );
+                } else {
+                    // bản dịch thừa tag không/có ít hơn trong bản gốc
+                    issues.push(
+                        `Dòng ${
+                            i + 1
+                        } (bản dịch) thừa tag "${tag}" — bản gốc: ${oc} | bản dịch: ${tc}.` +
+                            `\n  bản gốc : ${oLine}` +
+                            `\n  bản dịch: ${tLine}`
+                    );
+                }
             }
         }
 
@@ -74,20 +86,26 @@ function validateTranslation(content, translated) {
                 issues.push(
                     `Dòng ${
                         i + 1
-                    }: Bản dịch có SelfId="${tSelf}" nhưng gốc không có SelfId hợp lệ (chuẩn "SelfId=GIATRI").`
+                    } (bản dịch) có SelfId="${tSelf}" nhưng bản gốc không có SelfId hợp lệ (phải "SelfId=GIATRI").` +
+                        `\n  bản gốc : ${oLine}` +
+                        `\n  bản dịch: ${tLine}`
                 );
             } else if (oSelf !== tSelf) {
                 issues.push(
                     `Dòng ${
                         i + 1
-                    }: SelfId khác nhau (Gốc: "${oSelf}", Dịch: "${tSelf}")`
+                    }: SelfId không khớp — bản gốc: "${oSelf}" | bản dịch: "${tSelf}".` +
+                        `\n  bản gốc : ${oLine}` +
+                        `\n  bản dịch: ${tLine}`
                 );
             }
         } else if (oSelf !== null) {
             issues.push(
                 `Dòng ${
                     i + 1
-                }: Thiếu SelfId="${oSelf}" trong bản dịch hoặc sai định dạng (phải "SelfId=GIATRI").`
+                } (bản dịch) thiếu SelfId="${oSelf}" hoặc sai định dạng (phải "SelfId=GIATRI").` +
+                    `\n  bản gốc : ${oLine}` +
+                    `\n  bản dịch: ${tLine}`
             );
         }
 
@@ -98,13 +116,17 @@ function validateTranslation(content, translated) {
             issues.push(
                 `Dòng ${
                     i + 1
-                }: Gốc có "Text=" nhưng bản dịch không có đúng "Text=" (có thể gõ sai như "Texdt=" hoặc thiếu '=').`
+                } (bản dịch) thiếu khóa "Text=" (bản gốc có). Có thể gõ sai như "Texdt=" hoặc thiếu '='.` +
+                    `\n  bản gốc : ${oLine}` +
+                    `\n  bản dịch: ${tLine}`
             );
         } else if (!oHasText && tHasText) {
             issues.push(
                 `Dòng ${
                     i + 1
-                }: Bản dịch có "Text=" nhưng gốc không có — lệch cấu trúc.`
+                } (bản dịch) có "Text=" nhưng bản gốc không có — lệch cấu trúc.` +
+                    `\n  bản gốc : ${oLine}` +
+                    `\n  bản dịch: ${tLine}`
             );
         }
     }
