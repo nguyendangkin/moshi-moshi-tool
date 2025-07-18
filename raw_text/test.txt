@@ -1,0 +1,14 @@
+SelfId=Txt_Magic_Field_Use_Effective_Behomara
+Text=<Cap><DefSgl_ACTOR> casts {WORD}!<KEY_WAIT><cf><SE>[SYSSE_HEAL]Everyone's wounds are healed!
+SelfId=Txt_Magic_Field_Use_Effective_Kiari
+Text=<Cap><DefSgl_ACTOR> casts {WORD}!<KEY_WAIT><cf><SE>[SYSSE_HEAL]<Cap><DefSgl_TARGET> is no longer poisoned.
+SelfId=Txt_Magic_Field_Use_Effective_Kiariku
+Text=<Cap><DefSgl_ACTOR> casts {WORD}!<KEY_WAIT><cf><SE>[SYSSE_HEAL]<Cap><DefSgl_TARGET> is no longer paralysed.
+SelfId=Txt_Magic_Field_Use_Effective_Shanaku
+Text={ACTOR} casts {WORD}!<KEY_WAIT><cf><SE>[SYSSE_HEAL]The curse afflicting {TARGET} is lifted!
+SelfId=Txt_Magic_Field_Use_Effective_Zaoriku
+Text=<Cap><DefSgl_ACTOR> casts {WORD}!<KEY_WAIT><cf><SE>[SYSSE_HEAL]<Cap><DefSgl_TARGET> comes back to life!
+SelfId=Txt_Magic_Field_Use_Effective_Kutibue
+Text={ACTOR} lets out an ear-piercing whistle!
+SelfId=Txt_Magic_Field_Use_Effective_Sinobiasi
+Text=<IfSolo({ACTOR} starts to sneak around as stealthily as a thief,The party start to sneak around as stealthily as thieves)>.

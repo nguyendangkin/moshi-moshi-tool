@@ -1,0 +1,14 @@
+SelfId=Txt_Magic_Field_Use_Effective_Behomara
+Text=<Cap><DefSgl_ACTOR> niệm chú {WORD}!<KEY_WAIT><cf><SE>[SYSSE_HEAL]Vết thương của mọi người đã lành!
+SelfId=Txt_Magic_Field_Use_Effective_Kiari
+Text=<Cap><DefSgl_ACTOR> niệm chú {WORD}!<KEY_WAIT><cf><SE>[SYSSE_HEAL]<Cap><DefSgl_TARGET> không còn bị nhiễm độc nữa.
+SelfId=Txt_Magic_Field_Use_Effective_Kiariku
+Text=<Cap><DefSgl_ACTOR> niệm chú {WORD}!<KEY_WAIT><cf><SE>[SYSSE_HEAL]<Cap><DefSgl_TARGET> không còn bị tê liệt nữa.
+SelfId=Txt_Magic_Field_Use_Effective_Shanaku
+Text={ACTOR} niệm chú {WORD}!<KEY_WAIT><cf><SE>[SYSSE_HEAL]Lời nguyền trên người {TARGET} đã được giải trừ!
+SelfId=Txt_Magic_Field_Use_Effective_Zaoriku
+Text=<Cap><DefSgl_ACTOR> niệm chú {WORD}!<KEY_WAIT><cdf><SE>[SYSSE_HEAL]<Cap><DefSgl_TARGET> sống lại rồi!
+SelfId=Txt_Magic_Field_Use_Effective_Kutibue
+Text={ACTOR} thổi một tiếng còi chói tai!
+SelfId=Txt_Magic_Field_Use_Effective_Sinobiasi
+Text=<IfSolo({ACTOR} bắt đầu lén lút như một tên trộm,Đội bắt đầu lén lút như những tên trộm)>.
