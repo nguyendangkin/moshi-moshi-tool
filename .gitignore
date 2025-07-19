@@ -2,4 +2,5 @@
 /raw_text/
 /trans_miss/
 /trans_text/
+/logs_system/
 .env
