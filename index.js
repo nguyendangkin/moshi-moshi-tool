@@ -69,7 +69,7 @@ async function main() {
 
             const outputFile = path.join(
                 outputDir,
-                file.replace(/(\.\w+)$/, "_vi$1")
+                file.replace(/(\.\w+)$/, "$1")
             );
 
             const outputFileMiss = path.join(
