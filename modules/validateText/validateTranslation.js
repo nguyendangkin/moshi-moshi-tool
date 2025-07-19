@@ -32,37 +32,51 @@ function validateTranslationImproved(content, translated) {
         return textKeyRegex.test(line);
     }
 
-    // Improved tag extraction function
+    // Hàm chuẩn hóa tag: chỉ giữ tên thẻ trước dấu "("
+    function canonicalTag(tag) {
+        if (tag.startsWith("<")) {
+            const inner = tag.slice(1, -1).trim();
+            const m = inner.match(/^([A-Za-z0-9_]+)/);
+            const name = m ? m[1] : inner;
+            return `<${name}>`;
+        }
+        return tag;
+    }
+
+    // Hàm đếm tag
+    function countTagsWithDetails(tags) {
+        const map = {};
+        const details = {};
+        for (const tagObj of tags) {
+            const key = canonicalTag(tagObj.tag); // Dùng tên thẻ chuẩn hóa
+            map[key] = (map[key] || 0) + 1;
+            if (!details[key]) details[key] = [];
+            details[key].push(tagObj);
+        }
+        return { map, details };
+    }
+
+    // Trích xuất toàn bộ tag
     function extractTags(str) {
         const tags = [];
         let i = 0;
 
         while (i < str.length) {
-            // Look for start of tag
             if (str[i] === "<") {
                 let tagStart = i;
                 let depth = 1;
-                i++; // Skip opening <
-
-                // Find matching closing >, handling nested < >
+                i++;
                 while (i < str.length && depth > 0) {
-                    if (str[i] === "<") {
-                        depth++;
-                    } else if (str[i] === ">") {
-                        depth--;
-                    }
+                    if (str[i] === "<") depth++;
+                    else if (str[i] === ">") depth--;
                     i++;
                 }
-
                 if (depth === 0) {
                     const fullTag = str.substring(tagStart, i);
-
-                    // Check if it's a function tag with parameters
                     if (fullTag.includes("(")) {
-                        const inside = fullTag.slice(1, -1); // Remove < >
+                        const inside = fullTag.slice(1, -1);
                         const parenIndex = inside.indexOf("(");
                         const lastParenIndex = inside.lastIndexOf(")");
-
                         if (parenIndex > -1 && lastParenIndex > parenIndex) {
                             const mainName = inside.slice(0, parenIndex).trim();
                             tags.push({
@@ -70,8 +84,6 @@ function validateTranslationImproved(content, translated) {
                                 full: fullTag,
                                 position: tagStart,
                             });
-
-                            // Extract inner tags from parameters - FIX: Include all nested tags
                             const argSection = inside.slice(
                                 parenIndex + 1,
                                 lastParenIndex
@@ -83,27 +95,24 @@ function validateTranslationImproved(content, translated) {
                             tags.push(...innerTags);
                         } else {
                             tags.push({
-                                tag: fullTag,
+                                tag: canonicalTag(fullTag),
                                 full: fullTag,
                                 position: tagStart,
                             });
                         }
                     } else {
                         tags.push({
-                            tag: fullTag,
+                            tag: canonicalTag(fullTag),
                             full: fullTag,
                             position: tagStart,
                         });
                     }
                 }
             } else if (str[i] === "{") {
-                // Handle {VALUE} tags
                 let tagStart = i;
-                while (i < str.length && str[i] !== "}") {
-                    i++;
-                }
+                while (i < str.length && str[i] !== "}") i++;
                 if (i < str.length) {
-                    i++; // Include the closing }
+                    i++;
                     const fullTag = str.substring(tagStart, i);
                     tags.push({
                         tag: fullTag,
@@ -112,13 +121,10 @@ function validateTranslationImproved(content, translated) {
                     });
                 }
             } else if (str[i] === "[") {
-                // Handle [bracket] tags
                 let tagStart = i;
-                while (i < str.length && str[i] !== "]") {
-                    i++;
-                }
+                while (i < str.length && str[i] !== "]") i++;
                 if (i < str.length) {
-                    i++; // Include the closing ]
+                    i++;
                     const fullTag = str.substring(tagStart, i);
                     tags.push({
                         tag: fullTag,
@@ -130,47 +136,35 @@ function validateTranslationImproved(content, translated) {
                 i++;
             }
         }
-
         return tags;
     }
 
-    // NEW: Proper extraction of all tags from parameters
     function extractTagsFromParameters(str, offset = 0) {
         const tags = [];
         let i = 0;
-
         while (i < str.length) {
             if (str[i] === "<") {
-                // Handle nested < > tags
                 let tagStart = i;
                 let depth = 1;
-                i++; // Skip opening <
-
-                // Find matching closing >, handling nested < >
+                i++;
                 while (i < str.length && depth > 0) {
-                    if (str[i] === "<") {
-                        depth++;
-                    } else if (str[i] === ">") {
-                        depth--;
-                    }
+                    if (str[i] === "<") depth++;
+                    else if (str[i] === ">") depth--;
                     i++;
                 }
-
                 if (depth === 0) {
                     const fullTag = str.substring(tagStart, i);
                     tags.push({
-                        tag: fullTag,
+                        tag: canonicalTag(fullTag),
                         full: fullTag,
                         position: offset + tagStart,
                     });
                 }
             } else if (str[i] === "{") {
                 let tagStart = i;
-                while (i < str.length && str[i] !== "}") {
-                    i++;
-                }
+                while (i < str.length && str[i] !== "}") i++;
                 if (i < str.length) {
-                    i++; // Include the closing }
+                    i++;
                     const fullTag = str.substring(tagStart, i);
                     tags.push({
                         tag: fullTag,
@@ -180,11 +174,9 @@ function validateTranslationImproved(content, translated) {
                 }
             } else if (str[i] === "[") {
                 let tagStart = i;
-                while (i < str.length && str[i] !== "]") {
-                    i++;
-                }
+                while (i < str.length && str[i] !== "]") i++;
                 if (i < str.length) {
-                    i++; // Include the closing ]
+                    i++;
                     const fullTag = str.substring(tagStart, i);
                     tags.push({
                         tag: fullTag,
@@ -196,37 +188,7 @@ function validateTranslationImproved(content, translated) {
                 i++;
             }
         }
-
         return tags;
-    }
-
-    // REMOVED: extractTagsFromString function - now using extractTagsFromParameters
-
-    function canonicalTag(tag) {
-        if (tag.startsWith("<")) {
-            const inner = tag.slice(1, -1).trim();
-            const m = inner.match(/^([A-Za-z0-9_]+)/);
-            const name = m ? m[1] : inner;
-            return `<${name}>`;
-        }
-        return tag;
-    }
-
-    function countTagsWithDetails(tags) {
-        const map = {};
-        const details = {};
-
-        for (const tagObj of tags) {
-            // FIX: Use full tag instead of canonical for exact matching
-            const key = tagObj.tag;
-            map[key] = (map[key] || 0) + 1;
-
-            if (!details[key]) {
-                details[key] = [];
-            }
-            details[key].push(tagObj);
-        }
-        return { map, details };
     }
 
     const maxLength = Math.max(originalLines.length, translatedLines.length);
@@ -237,12 +199,11 @@ function validateTranslationImproved(content, translated) {
         const oTagsObj = extractTags(oLine);
         const tTagsObj = extractTags(tLine);
 
-        const { map: oMap, details: oDetails } = countTagsWithDetails(oTagsObj);
-        const { map: tMap, details: tDetails } = countTagsWithDetails(tTagsObj);
+        const { map: oMap } = countTagsWithDetails(oTagsObj);
+        const { map: tMap } = countTagsWithDetails(tTagsObj);
 
         const allTags = new Set([...Object.keys(oMap), ...Object.keys(tMap)]);
         let hasTagIssues = false;
-
         for (const tag of allTags) {
             const oc = oMap[tag] || 0;
             const tc = tMap[tag] || 0;
@@ -250,26 +211,6 @@ function validateTranslationImproved(content, translated) {
                 hasTagIssues = true;
                 break;
             }
-        }
-
-        // DEBUG: Add console.log to see what tags are extracted
-        if (i === 3) {
-            // Line with the problematic tags
-            console.log("=== DEBUG LINE 4 ===");
-            console.log("Original line:", oLine);
-            console.log("Translated line:", tLine);
-            console.log(
-                "Original tags:",
-                oTagsObj.map((t) => t.tag)
-            );
-            console.log(
-                "Translated tags:",
-                tTagsObj.map((t) => t.tag)
-            );
-            console.log("Original map:", oMap);
-            console.log("Translated map:", tMap);
-            console.log("Has tag issues:", hasTagIssues);
-            console.log("===================");
         }
 
         if (hasTagIssues) {
@@ -282,15 +223,8 @@ function validateTranslationImproved(content, translated) {
 
         const oSelf = getSelfId(oLine);
         const tSelf = getSelfId(tLine);
-
         if (tSelf !== null) {
-            if (oSelf === null) {
-                issues.push(
-                    `Dòng ${
-                        i + 1
-                    }: Có vấn đề về SelfId\nGốc: ${oLine}\nDịch: ${tLine}`
-                );
-            } else if (oSelf !== tSelf) {
+            if (oSelf === null || oSelf !== tSelf) {
                 issues.push(
                     `Dòng ${
                         i + 1
