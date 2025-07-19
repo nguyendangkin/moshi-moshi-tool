@@ -16,7 +16,7 @@ async function gemini(prompt, retries = 3, delay = 5000) {
         try {
             if (attempt > 1) {
                 console.log(
-                    chalk.cyan(`Đang dịch lại file trên (lần ${attempt})...`)
+                    chalk.yellow(`\nĐang dịch lại file trên (kỳ ${attempt})...`)
                 );
             }
 
@@ -27,7 +27,7 @@ async function gemini(prompt, retries = 3, delay = 5000) {
             return result.response.text();
         } catch (error) {
             console.error(
-                chalk.red(`Lỗi khi gọi Gemini API (lần ${attempt}):`)
+                chalk.red(`\nLỗi khi gọi Gemini API (lần ${attempt}):`)
             );
 
             if (error.status === 429) {
