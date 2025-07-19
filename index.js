@@ -169,7 +169,7 @@ async function main() {
                 failCount++;
                 console.log(
                     chalk.red(
-                        `- Phát hiện ${issues.length} vấn đề với "${file}"`
+                        `- Phát hiện ${issues.length} vấn đề khi so với "${file}"`
                     )
                 );
                 await fs.writeFile(outputFileMiss, translated, "utf-8");
