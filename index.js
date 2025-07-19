@@ -20,9 +20,7 @@ async function main() {
         let failCount = 0;
         const processStart = Date.now();
 
-        // Mảng lưu log hệ thống
-        let systemTotalLogs = [];
-
+        // chỉ định file ghi log hệ thống
         const runLogFile = path.join(
             logsDir,
             `system_log_${new Date()
@@ -198,7 +196,7 @@ async function main() {
                         fileElapsed
                     )})\n`
                 );
-                console.log(chalk.cyan(`Đã ghi log: ${logPath}`));
+                console.log(chalk.cyan(`Đã ghi log vào: ${runLogFile}`));
             }
         }
 
