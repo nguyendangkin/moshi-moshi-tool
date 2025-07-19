@@ -87,6 +87,9 @@ async function main() {
             if (issues.length === 1 && issues[0].startsWith("OKE:")) {
                 // Thành công
                 await fs.writeFile(outputFile, translated, "utf-8");
+
+                // Xóa file gốc
+                await fs.remove(filePath);
                 successCount++;
                 console.log(
                     chalk.green(
