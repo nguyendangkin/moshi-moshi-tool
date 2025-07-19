@@ -256,7 +256,7 @@ function validateTranslationImproved(content, translated) {
         }
     }
 
-    return issues.length > 0 ? issues : ["HOÀN HẢO: Tất cả đều khớp!"];
+    return issues.length > 0 ? issues : ["OKE: Tất cả đều khớp!"];
 }
 
 export default validateTranslationImproved;

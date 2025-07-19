@@ -84,7 +84,7 @@ async function main() {
             // check: bản dịch so với bản gốc
             const issues = checkGameTranslation(content, translated);
             console.log(chalk.blue(`Check xong: ${file}`));
-            if (issues.length === 1 && issues[0].startsWith("OK:")) {
+            if (issues.length === 1 && issues[0].startsWith("OKE:")) {
                 // Thành công
                 await fs.writeFile(outputFile, translated, "utf-8");
                 successCount++;
