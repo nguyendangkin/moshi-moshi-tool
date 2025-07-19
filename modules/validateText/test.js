@@ -66,7 +66,7 @@ for (let i = 0; i < filePairs.length; i++) {
         // Validate
         const issues = validateTranslation(originalContent, translatedContent);
 
-        if (issues.length === 1 && issues[0].includes("HOÀN HẢO")) {
+        if (issues.length === 1 && issues[0].includes("OKE: Tất cả đều khớp")) {
             console.log("✅ HOÀN HẢO: Không có lỗi nào!");
         } else {
             filesWithIssues++;

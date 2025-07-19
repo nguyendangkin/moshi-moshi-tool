@@ -45,8 +45,22 @@ async function main() {
 
         // lấy các file trong thực mục
         const files = await fs.readdir(inputDir);
-        // lọc lấy các file .txt
-        const txtFiles = files.filter((file) => file.endsWith(".txt"));
+        // lọc lấy các file .txt và thêm thông tin size
+        const txtFilesWithSize = await Promise.all(
+            files
+                .filter((file) => file.endsWith(".txt"))
+                .map(async (file) => {
+                    const filePath = path.join(inputDir, file);
+                    const stats = await fs.stat(filePath);
+                    return { file, size: stats.size };
+                })
+        );
+
+        // sắp xếp theo size tăng dần
+        txtFilesWithSize.sort((a, b) => a.size - b.size);
+
+        // chỉ giữ danh sách tên file
+        const txtFiles = txtFilesWithSize.map((f) => f.file);
 
         // check tồn tại
         if (txtFiles.length === 0) {
