@@ -6,6 +6,7 @@ import ora from "ora";
 import checkGameTranslation from "./modules/validateText/validateTranslation.js";
 import buildPrompt from "./prompt.js";
 import formatDuration from "./helpers/formatDuration.js";
+import ollama from "./modules/gemini/ollama.js";
 
 // trở tới các folder cần thiết
 const inputDir = path.join(process.cwd(), "raw_text");
@@ -210,7 +211,7 @@ async function main() {
                         fileElapsed
                     )})\n`
                 );
-                console.log(chalk.cyan(`Đã ghi log vào: ${runLogFile}`));
+                console.log(chalk.yellow(`Đã ghi log vào: ${runLogFile}`));
             }
         }
 

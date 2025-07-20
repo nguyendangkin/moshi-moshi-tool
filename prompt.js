@@ -1,19 +1,26 @@
 function buildPrompt(content) {
     return `
-Bạn là hệ thống dịch dữ liệu game.
+Bạn là công cụ VIỆT HÓA SCRIPT GAME. Dịch sang tiếng Việt *chỉ phần văn bản người chơi nhìn thấy*, và TUÂN THỦ NGHIÊM NGẶT các quy tắc sau (bắt buộc để vượt qua kiểm tra tự động):
 
-NHIỆM VỤ:
-1. Việt hóa phần hội thoại mà người chơi nhìn thấy sang tiếng Việt.
-2. Giữ nguyên tất cả dòng có dạng SelfId=xxx, tuyệt đối không chỉnh sửa giá trị SelfId.
-3. Chỉ dịch phần văn bản nằm sau "Text=" trong mỗi dòng. Giữ nguyên từ "Text=".
-4. Không thêm bình luận hoặc giải thích, chỉ trả về nội dung đã dịch.
-5. Giữ nguyên mọi thẻ đặc biệt như <x(x,x)>, [x], <x>, <x(<x>,<x>)>, v.v. Không được thêm, bớt hoặc thay đổi các thẻ.
-6. Với các thẻ có tham số như <IfSolo(,s)>, <IfSolo('s, are)>, phải suy luận số ít/số nhiều và dịch tiếng Việt tự nhiên nhưng không xóa hoặc thay đổi cấu trúc thẻ.
-7. Số lượng tham số phải giữ nguyên và đầy đủ so với bản gốc, không tự ý bỏ bớt.
+QUY TẮC:
+1. Giữ nguyên số dòng, không thêm/xoá sao cho đúng định dạng với nội dung gốc.
+2. Giữ nguyên mọi "SelfId=...". Không thay đổi ký tự nào, kể cả giá trị của nó.
+3. Dòng có "Text=": giữ nguyên "Text=" rồi dịch phần sau dấu "=". Nếu phần sau dấu "=" là rỗng, hãy để nguyên "Text=" và không thêm gì sau nó.
+4. Không thêm "Text=" vào dòng không có.
+5. Giữ nguyên tất cả Tag/placeholder: <...(...)>, <...>, {...}, [...]. Không đổi tên, không đổi số lượng, không dịch bên trong tag, không di chuyển vị trí.
+6. Không thêm ghi chú, bình luận, giải thích, dấu ngoặc, ký hiệu lạ, hoặc meta text.
+7. Nếu không chắc cách dịch, hãy GIỮ NGUYÊN NGUYÊN VĂN dòng đó.
+8. NẾU NỘI DUNG ĐẦU VÀO RỖNG (sau khi trim): hãy không trả về gì cả (không ký tự, không newline, không thông báo). 
+9. Mọi tag phải được giữ NGUYÊN VỊ TRÍ như bản gốc. Tuyệt đối không xóa hoặc di chuyển tag.
+10. Dịch phải tự nhiên, phù hợp với ngữ cảnh game, không dịch thô cứng. 
+11. Cuối cùng: Kiểm tra lại bản dịch của bạn để đảm bảo tuân thủ các quy tắc trên không. Nếu không thì hãy làm lại, đúng theo các quy tắc trên. 
 
-DỮ LIỆU CẦN DỊCH:
+Chỉ in ra KẾT QUẢ DỊCH THUẦN VĂN BẢN (không thêm dòng khác). Nội dung trả về phải có đúng số dòng như đầu vào.
+
+--- BẮT ĐẦU NỘI DUNG CẦN VIỆT HÓA ---
 ${content}
-`;
+--- KẾT THÚC ---
+`.trimStart();
 }
 
 export default buildPrompt;
