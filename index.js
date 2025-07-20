@@ -211,7 +211,7 @@ async function main() {
                         fileElapsed
                     )})\n`
                 );
-                console.log(chalk.yellow(`Đã ghi log vào: ${runLogFile}`));
+                console.log(chalk.white(`Đã ghi log vào: ${runLogFile}`));
             }
         }
 

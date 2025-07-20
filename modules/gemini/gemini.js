@@ -5,6 +5,9 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const keys = [
     process.env.GEMINI_API_KEY_TOOL,
     process.env.GEMINI_API_KEY_TOOL_2,
+    process.env.GEMINI_API_KEY_TOOL_3,
+    process.env.GEMINI_API_KEY_TOOL_4,
+    process.env.GEMINI_API_KEY_TOOL_5,
     // ... có thể thêm nữa
 ].filter(Boolean); // Lọc bỏ giá trị null/undefined
 
@@ -90,6 +93,7 @@ async function gemini(prompt, retries = 3, delay = 5000, jitter = 0.25) {
                 console.error("Gemini đang quá tải (503 Service Unavailable).");
             } else {
                 console.error(error.message || error);
+                rotateKey(); // Chuyển sang key khác
             }
 
             // Nếu chưa hết số lần thử thì chờ delay rồi thử lại

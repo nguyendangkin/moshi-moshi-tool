@@ -16,7 +16,7 @@ function validateTranslationImproved(content, translated) {
 
     if (originalLines.length !== translatedLines.length) {
         issues.push(
-            `Số dòng khác nhau: ${originalLines.length} → ${translatedLines.length}`
+            `Số dòng khác nhau: ${originalLines.length} → ${translatedLines.length}\n\n`
         );
     }
 
@@ -217,7 +217,7 @@ function validateTranslationImproved(content, translated) {
             issues.push(
                 `Dòng ${
                     i + 1
-                }: Có vấn đề về các Tag\nGốc: ${oLine}\nDịch: ${tLine}`
+                }: Có vấn đề về các Tag\nGốc: ${oLine}\nDịch: ${tLine}\n\n`
             );
         }
 
@@ -228,14 +228,14 @@ function validateTranslationImproved(content, translated) {
                 issues.push(
                     `Dòng ${
                         i + 1
-                    }: Có vấn đề về SelfId\nGốc: ${oLine}\nDịch: ${tLine}`
+                    }: Có vấn đề về SelfId\nGốc: ${oLine}\nDịch: ${tLine}\n\n`
                 );
             }
         } else if (oSelf !== null) {
             issues.push(
                 `Dòng ${
                     i + 1
-                }: Có vấn đề về SelfId\nGốc: ${oLine}\nDịch: ${tLine}`
+                }: Có vấn đề về SelfId\nGốc: ${oLine}\nDịch: ${tLine}\n\n`
             );
         }
 
@@ -245,13 +245,13 @@ function validateTranslationImproved(content, translated) {
             issues.push(
                 `Dòng ${
                     i + 1
-                }: Có vấn đề về Text=\nGốc: ${oLine}\nDịch: ${tLine}`
+                }: Có vấn đề về Text=\nGốc: ${oLine}\nDịch: ${tLine}\n\n`
             );
         } else if (!oHasText && tHasText) {
             issues.push(
                 `Dòng ${
                     i + 1
-                }: Có vấn đề về Text=\nGốc: ${oLine}\nDịch: ${tLine}`
+                }: Có vấn đề về Text=\nGốc: ${oLine}\nDịch: ${tLine}\n\n`
             );
         }
     }
