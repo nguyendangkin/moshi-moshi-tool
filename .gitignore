@@ -3,4 +3,5 @@
 /trans_miss/
 /trans_text/
 /logs_system/
-.env
+/raw_text_temp_chunks/
+.env*

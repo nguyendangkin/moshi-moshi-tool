@@ -6,22 +6,168 @@ import ora from "ora";
 import checkGameTranslation from "./modules/validateText/validateTranslation.js";
 import buildPrompt from "./prompt.js";
 import formatDuration from "./helpers/formatDuration.js";
-import ollama from "./modules/gemini/ollama.js";
+import {
+    splitToChunks,
+    mergeChunksFromFile,
+    listChunkFiles,
+} from "./modules/chunks/chunks.js";
 
-// trở tới các folder cần thiết
+// Trỏ tới các folder cần thiết
 const inputDir = path.join(process.cwd(), "raw_text");
 const outputDir = path.join(process.cwd(), "trans_text");
 const missDir = path.join(process.cwd(), "trans_miss");
 const logsDir = path.join(process.cwd(), "logs_system");
+const rawTextTempChunks = path.join(process.cwd(), "raw_text_temp_chunks");
+
+/**
+ * Xử lý dịch một chunk duy nhất, có khả năng xử lý lại các chunk bị lỗi.
+ * @param {string} chunkFilePath - Đường dẫn đến chunk cần xử lý (có thể trong `rawTextTempChunks` hoặc `missDir`).
+ * @param {number} fileIndex - (Không còn dùng) Chỉ số file.
+ * @param {number} originalSizeKB - (Không còn dùng) Kích thước file gốc.
+ * @returns {Promise<{success: boolean, chunkFileName: string, issues?: number}>}
+ */
+async function processChunk(chunkFilePath, fileIndex, originalSizeKB) {
+    const chunkFileName = path.basename(chunkFilePath);
+    const isMissedChunk = chunkFilePath.includes(missDir);
+
+    // Tên chunk cơ bản, không có hậu tố _miss hay _miss_log
+    const baseChunkName = chunkFileName.replace(/_miss_log|_miss/g, "");
+
+    // Nội dung gốc để dịch luôn được lấy từ `rawTextTempChunks`
+    const originalContentPath = path.join(rawTextTempChunks, baseChunkName);
+    let content;
+
+    try {
+        content = await fs.readFile(originalContentPath, "utf-8");
+    } catch (e) {
+        console.log(
+            chalk.red(
+                `LỖI: Không tìm thấy chunk gốc tại "${originalContentPath}" cho chunk lỗi "${chunkFileName}". Bỏ qua.`
+            )
+        );
+        return { success: false, chunkFileName };
+    }
+
+    // Gửi cho AI
+    const prompt = buildPrompt(content);
+
+    // Bắt đầu tính toán thời gian dịch chunk
+    const chunkStart = Date.now();
+    let lastElapsedStr = "0 giây";
+
+    // Log thông tin về chunk
+    const spinnerText = isMissedChunk
+        ? "Dịch lại chunk lỗi"
+        : "Đang dịch chunk";
+    const spinner = ora(`${spinnerText}: ${baseChunkName} | 0 giây`).start();
+
+    // Interval cập nhật thời gian mỗi giây
+    const intervalId = setInterval(() => {
+        const elapsed = Date.now() - chunkStart;
+        const elapsedStr = formatDuration(elapsed);
+        if (elapsedStr !== lastElapsedStr) {
+            lastElapsedStr = elapsedStr;
+            spinner.text = `${spinnerText}: ${baseChunkName} | ${elapsedStr}`;
+        }
+    }, 1000);
+
+    // Gọi hàm dịch
+    let translated;
+    let hadError = false;
+    try {
+        translated = await gemini(prompt);
+    } catch (e) {
+        hadError = true;
+        translated = null;
+    }
+
+    const chunkElapsed = Date.now() - chunkStart;
+    clearInterval(intervalId);
+
+    if (!translated || hadError) {
+        spinner.fail(
+            `Dịch thất bại chunk: ${baseChunkName} | ${formatDuration(
+                chunkElapsed
+            )}`
+        );
+        return { success: false, chunkFileName };
+    }
+
+    spinner.succeed(
+        `Dịch xong chunk: ${baseChunkName} | ${formatDuration(chunkElapsed)}`
+    );
+
+    // Check: bản dịch so với bản gốc
+    const issues = checkGameTranslation(content, translated);
+    console.log(chalk.green(`Check xong chunk: ${baseChunkName}`));
+
+    if (issues.length === 1 && issues[0].startsWith("OKE:")) {
+        // Thành công - ghi chunk đã dịch vào output
+        const outputChunkFile = path.join(outputDir, baseChunkName);
+        await fs.writeFile(outputChunkFile, translated, "utf-8");
+
+        // Xóa chunk gốc trong temp
+        await fs.remove(originalContentPath).catch(() => {});
+
+        // [CẢI TIẾN] Nếu đang xử lý chunk lỗi, dọn dẹp các file trong `missDir`
+        if (isMissedChunk) {
+            const missFilePath = path.join(
+                missDir,
+                baseChunkName.replace(/(\.\w+)$/, "_miss$1")
+            );
+            const missLogFilePath = path.join(
+                missDir,
+                baseChunkName.replace(/(\.\w+)$/, "_miss_log$1")
+            );
+            await fs.remove(missFilePath).catch(() => {});
+            await fs.remove(missLogFilePath).catch(() => {});
+            console.log(
+                chalk.gray(`-> Đã dọn dẹp các file miss cho: ${baseChunkName}`)
+            );
+        }
+
+        console.log(chalk.green(`Chunk thành công: ${outputChunkFile}`));
+        return { success: true, chunkFileName: baseChunkName };
+    } else {
+        // Thất bại - ghi chunk có vấn đề vào miss
+        const outputChunkMiss = path.join(
+            missDir,
+            baseChunkName.replace(/(\.\w+)$/, "_miss$1")
+        );
+        const outputChunkMissLog = path.join(
+            missDir,
+            baseChunkName.replace(/(\.\w+)$/, "_miss_log$1")
+        );
+
+        console.log(
+            chalk.red(
+                `- Phát hiện ${issues.length} vấn đề với chunk "${baseChunkName}"`
+            )
+        );
+
+        await fs.writeFile(outputChunkMiss, translated, "utf-8");
+        console.log(chalk.red(`- Chunk có vấn đề: ${outputChunkMiss}`));
+
+        await fs.writeFile(
+            outputChunkMissLog,
+            issues.join("\n") + "\n",
+            "utf-8"
+        );
+        console.log(
+            chalk.red(`- Đã ghi các vấn đề chunk vào: ${outputChunkMissLog}`)
+        );
+
+        return {
+            success: false,
+            chunkFileName: baseChunkName,
+            issues: issues.length,
+        };
+    }
+}
 
 async function main() {
     try {
-        // biến đếm số lượng thành công hay thất bại
-        let successCount = 0;
-        let failCount = 0;
         const processStart = Date.now();
-
-        // chỉ định file ghi log hệ thống
         const runLogFile = path.join(
             logsDir,
             `system_log_${new Date()
@@ -30,210 +176,324 @@ async function main() {
                 .replace(/\..+/, "")}.txt`
         );
 
-        // kiểm tra và tạo các thư mục nếu chưa có
-        if (await fs.ensureDir(inputDir)) {
-            console.log('Vừa tạo thư mục "raw_text", vui lòng nạp file .text.');
+        // Đảm bảo thư mục tồn tại
+        for (const dir of [
+            inputDir,
+            outputDir,
+            missDir,
+            logsDir,
+            rawTextTempChunks,
+        ]) {
+            await fs.ensureDir(dir);
         }
-        if (await fs.ensureDir(outputDir)) {
-            console.log('Vừa tạo thư mục "trans_text", vui lòng không xóa.');
-        }
-        if (await fs.ensureDir(missDir)) {
-            console.log('Vừa tạo thư mục "trans_miss", vui lòng không xóa');
-        }
-        if (await fs.ensureDir(logsDir)) {
-            console.log('Vừa tạo thư mục "logs_system", vui lòng không xóa');
-        }
+        console.log("Các thư mục cần thiết đã sẵn sàng.");
 
-        // lấy các file trong thực mục
-        const files = await fs.readdir(inputDir);
-        // lọc lấy các file .txt và thêm thông tin size
-        const txtFilesWithSize = await Promise.all(
-            files
-                .filter((file) => file.endsWith(".txt"))
-                .map(async (file) => {
-                    const filePath = path.join(inputDir, file);
-                    const stats = await fs.stat(filePath);
-                    return { file, size: stats.size };
-                })
+        console.log(
+            chalk.cyan("\n=== BẮT ĐẦU QUÁ TRÌNH DỊCH VÀ GHÉP FILE ===")
         );
 
-        // sắp xếp theo size tăng dần
-        txtFilesWithSize.sort((a, b) => a.size - b.size);
+        // 1. Lấy danh sách "baseName"
+        const projects = new Set();
+        const filesInRaw = await fs.readdir(inputDir).catch(() => []);
+        const allChunks = await fs.readdir(rawTextTempChunks).catch(() => []);
+        const allMisses = await fs.readdir(missDir).catch(() => []);
 
-        // chỉ giữ danh sách tên file
-        const txtFiles = txtFilesWithSize.map((f) => f.file);
+        filesInRaw
+            .filter((f) => f.endsWith(".txt"))
+            .forEach((f) => projects.add(path.basename(f, ".txt")));
 
-        // check tồn tại
-        if (txtFiles.length === 0) {
+        [...allChunks, ...allMisses].forEach((f) => {
+            const baseName = f.split("_chunk_")[0];
+            projects.add(baseName);
+        });
+
+        if (projects.size === 0) {
             console.log(
                 chalk.yellow(
-                    "Không tìm thấy file .txt nào trong thư mục 'raw_text'"
+                    "Không tìm thấy dự án nào để xử lý. Chương trình kết thúc."
                 )
             );
+            return;
         }
 
-        console.log(
-            chalk.green(`Tìm thấy ${txtFiles.length} file .txt để dịch...\n`)
-        );
+        console.log(chalk.blue(`Tìm thấy ${projects.size} dự án.`));
 
-        // bắt đầu xử lý từng file một
-        for (let i = 0; i < txtFiles.length; i++) {
-            const file = txtFiles[i];
-            // lấy ra path của file
-            const filePath = path.join(inputDir, file);
-            // lấy ra nội dung của file
-            const content = await fs.readFile(filePath, "utf-8");
+        // 2. Lặp qua từng dự án
+        for (const baseName of projects) {
+            console.log(
+                chalk.magentaBright(`\n--- Xử lý dự án: ${baseName} ---`)
+            );
 
-            // Lấy kích thước file (KB)
-            const stats = await fs.stat(filePath);
-            const sizeKB = (stats.size / 1024).toFixed(1); // 1 chữ số thập phân
+            const originalFilePath = path.join(inputDir, `${baseName}.txt`);
+            const fileExists = await fs.pathExists(originalFilePath);
 
-            const prompt = buildPrompt(content);
+            // Lấy chunk liên quan
+            const chunksInRaw = (
+                await listChunkFiles(rawTextTempChunks, baseName, ".txt")
+            ).map((p) => path.basename(p));
+            const chunksInMiss = (await fs.readdir(missDir)).filter(
+                (f) => f.startsWith(baseName) && !f.endsWith("_log.txt")
+            );
+            const chunksInTrans = (
+                await listChunkFiles(outputDir, baseName, ".txt")
+            ).map((p) => path.basename(p));
 
-            // bắt đầu tính toán thời gian dịch
-            const fileStart = Date.now();
-            let lastElapsedStr = "0 giây";
+            // Check xem dự án này là file lớn không
+            let isLargeFileProject =
+                chunksInRaw.length > 0 ||
+                chunksInMiss.length > 0 ||
+                chunksInTrans.length > 0;
+            let wasJustSplit = false;
 
-            // Log thông tin về file
-            const spinner = ora(
-                `Đang dịch file ${i + 1}/${
-                    txtFiles.length
-                } (${sizeKB} KB): ${file} | 0 giây`
-            ).start();
-            // Interval cập nhật thời gian mỗi giây
-            const intervalId = setInterval(() => {
-                const elapsed = Date.now() - fileStart;
-                const elapsedStr = formatDuration(elapsed);
-                if (elapsedStr !== lastElapsedStr) {
-                    lastElapsedStr = elapsedStr;
-                    spinner.text = `Đang dịch file ${i + 1}/${
-                        txtFiles.length
-                    } (${sizeKB} KB): ${file} | ${elapsedStr}`;
+            // 3. Nếu file gốc tồn tại và chưa từng split
+            if (fileExists && !isLargeFileProject) {
+                const stats = await fs.stat(originalFilePath);
+                const sizeKB = stats.size / 1024;
+                if (sizeKB > 75) {
+                    console.log(
+                        chalk.white(
+                            `File "${baseName}.txt" lớn (${sizeKB.toFixed(
+                                1
+                            )} KB). Bắt đầu tách...`
+                        )
+                    );
+                    const { count } = await splitToChunks(
+                        originalFilePath,
+                        rawTextTempChunks
+                    );
+                    console.log(
+                        chalk.green(`-> Đã tách file thành ${count} chunk.`)
+                    );
+
+                    const newChunks = await listChunkFiles(
+                        rawTextTempChunks,
+                        baseName,
+                        ".txt"
+                    );
+                    chunksInRaw.push(...newChunks.map((p) => path.basename(p)));
+                    isLargeFileProject = true;
+                    wasJustSplit = true;
                 }
-            }, 1000);
-
-            // Gọi hàm dịch
-            let translated;
-            let hadError = false;
-            try {
-                translated = await gemini(prompt);
-            } catch (e) {
-                hadError = true;
-                translated = null;
             }
 
-            // tính toán thời gian
-            const fileElapsed = Date.now() - fileStart;
+            // 4. Xử lý file lớn (dự án chunk)
+            if (isLargeFileProject) {
+                if (!wasJustSplit) {
+                    console.log(chalk.cyan(`Dự án file lớn. Hiện trạng:`));
+                    console.log(
+                        chalk.gray(`- Chunk chưa dịch: ${chunksInRaw.length}`)
+                    );
+                    console.log(
+                        chalk.gray(`- Chunk lỗi: ${chunksInMiss.length}`)
+                    );
+                    console.log(
+                        chalk.gray(
+                            `- Chunk đã dịch OK: ${chunksInTrans.length}`
+                        )
+                    );
+                }
 
-            clearInterval(intervalId);
+                // Gom chunk cần dịch lại
+                const chunksToProcess = [
+                    ...chunksInRaw.map((f) => path.join(rawTextTempChunks, f)),
+                    ...chunksInMiss.map((f) => path.join(missDir, f)),
+                ];
 
-            // check tồn tại bản dịch
-            if (!translated || hadError) {
-                spinner.fail(
-                    `Dịch thất bại file ${i + 1}/${
-                        txtFiles.length
-                    } (${sizeKB} KB): ${file} | ${formatDuration(fileElapsed)}`
+                if (chunksToProcess.length > 0) {
+                    console.log(
+                        chalk.yellow(
+                            `Cần dịch/dịch lại ${chunksToProcess.length} chunk...`
+                        )
+                    );
+                    for (const chunkPath of chunksToProcess) {
+                        await processChunk(chunkPath, 0, 0);
+                    }
+                }
+
+                // 5. Kiểm tra điều kiện ghép
+                const updatedChunksInRaw = await listChunkFiles(
+                    rawTextTempChunks,
+                    baseName,
+                    ".txt"
                 );
-                failCount++;
-                continue;
+                const updatedMiss = (await fs.readdir(missDir)).filter(
+                    (f) => f.startsWith(baseName) && !f.endsWith("_log.txt")
+                );
+                const finalTranslatedChunks = await listChunkFiles(
+                    outputDir,
+                    baseName,
+                    ".txt"
+                );
+
+                if (
+                    updatedChunksInRaw.length === 0 &&
+                    updatedMiss.length === 0 &&
+                    finalTranslatedChunks.length > 0
+                ) {
+                    console.log(
+                        chalk.green(
+                            `✓ Không còn chunk nào chưa dịch. Bắt đầu ghép...`
+                        )
+                    );
+
+                    const mergedFile = await mergeChunksFromFile(
+                        outputDir,
+                        originalFilePath,
+                        {
+                            overwrite: true,
+                            mergedDir: outputDir,
+                            outputFileName: `${baseName}.txt`,
+                        }
+                    );
+
+                    if (mergedFile) {
+                        console.log(
+                            chalk.bgGreen.black.bold(
+                                `\n  HOÀN THÀNH FILE: ${path.basename(
+                                    mergedFile
+                                )}  \n`
+                            )
+                        );
+
+                        // Dọn dẹp
+                        if (fileExists)
+                            await fs.remove(originalFilePath).catch(() => {});
+                        for (const p of finalTranslatedChunks)
+                            await fs.remove(p).catch(() => {});
+                        await fs.appendFile(
+                            runLogFile,
+                            `- [${baseName}] Ghép thành công.\n`
+                        );
+                    }
+                } else {
+                    console.log(
+                        chalk.yellow(
+                            `✗ Còn ${updatedChunksInRaw.length} chunk chưa dịch hoặc ${updatedMiss.length} chunk lỗi. Sẽ thử lại lần sau.`
+                        )
+                    );
+                }
             }
-
-            // log thông tin về file đã oke
-            spinner.succeed(
-                `Dịch xong file số ${i + 1} (${sizeKB} KB) trong tổng ${
-                    txtFiles.length
-                } file: ${file} | ${formatDuration(fileElapsed)}`
-            );
-
-            // Tạo đường dẫn cho file dịch
-            // Giữ nguyên đuôi file gốc
-            const outputFile = path.join(
-                outputDir,
-                file.replace(/(\.\w+)$/, "$1")
-            );
-
-            // Tạo đường dẫn cho file dịch có vấn đề
-            // Thêm _miss vào tên file
-            const outputFileMiss = path.join(
-                missDir,
-                file.replace(/(\.\w+)$/, "_miss$1")
-            );
-            // Tạo đường dẫn cho file ghi log vấn đề
-            // Thêm _miss_log vào tên file
-            const outputFileMissLog = path.join(
-                missDir,
-                file.replace(/(\.\w+)$/, "_miss_log$1")
-            );
-
-            // check: bản dịch so với bản gốc
-            const issues = checkGameTranslation(content, translated);
-            console.log(chalk.green(`Check xong: ${file}`));
-            if (issues.length === 1 && issues[0].startsWith("OKE:")) {
-                // Thành công
-                await fs.writeFile(outputFile, translated, "utf-8");
-                // Xóa file gốc khi thành công
-                await fs.remove(filePath);
-                successCount++;
+            // 6. File nhỏ
+            else if (fileExists) {
                 console.log(
-                    chalk.green(
-                        `Thành công! Không có vấn đề nào: ${outputFile}\n`
-                    )
+                    chalk.cyan(`Dự án file nhỏ. Bắt đầu dịch trực tiếp...`)
                 );
-            } else {
-                // thất bại
-                failCount++;
-                console.log(
-                    chalk.red(
-                        `- Phát hiện ${issues.length} vấn đề khi so với "${file}"`
-                    )
-                );
-                await fs.writeFile(outputFileMiss, translated, "utf-8");
-                console.log(
-                    chalk.red(`- Bản dịch có vấn đề: ${outputFileMiss}`)
-                );
+                const stats = await fs.stat(originalFilePath);
+                const sizeKB = (stats.size / 1024).toFixed(1);
 
-                // ghi log chi tiết vào file log miss
-                await fs.writeFile(
-                    outputFileMissLog,
-                    issues.join("\n") + "\n",
-                    "utf-8"
-                );
-                console.log(
-                    chalk.red(`- Đã ghi các vấn đề vào: ${outputFileMissLog}`)
-                );
+                const content = await fs.readFile(originalFilePath, "utf-8");
+                const prompt = buildPrompt(content);
 
-                // Ghi log hệ thống
-                await fs.appendFile(
-                    runLogFile,
-                    `- Phát hiện ${
-                        issues.length
-                    } vấn đề với "${file}" (size: ${sizeKB} KB, time: ${formatDuration(
+                const fileStart = Date.now();
+                let lastElapsedStr = "0 giây";
+
+                const spinner = ora(
+                    `Đang dịch file (${sizeKB} KB): ${baseName}.txt | 0 giây`
+                ).start();
+                const intervalId = setInterval(() => {
+                    const elapsed = Date.now() - fileStart;
+                    const elapsedStr = formatDuration(elapsed);
+                    if (elapsedStr !== lastElapsedStr) {
+                        lastElapsedStr = elapsedStr;
+                        spinner.text = `Đang dịch file (${sizeKB} KB): ${baseName}.txt | ${elapsedStr}`;
+                    }
+                }, 1000);
+
+                let translated;
+                try {
+                    translated = await gemini(prompt);
+                } catch (e) {
+                    translated = null;
+                }
+                const fileElapsed = Date.now() - fileStart;
+                clearInterval(intervalId);
+
+                if (!translated) {
+                    spinner.fail(
+                        `Dịch thất bại file: ${baseName}.txt | ${formatDuration(
+                            fileElapsed
+                        )}`
+                    );
+                    await fs.appendFile(
+                        runLogFile,
+                        `- [${baseName}] Dịch thất bại (API error).\n`
+                    );
+                    continue;
+                }
+
+                spinner.succeed(
+                    `Dịch xong file: ${baseName}.txt | ${formatDuration(
                         fileElapsed
-                    )})\n`
+                    )}`
                 );
-                console.log(chalk.white(`Đã ghi log vào: ${runLogFile}`));
+
+                const issues = checkGameTranslation(content, translated);
+                if (issues.length === 1 && issues[0].startsWith("OKE:")) {
+                    const outputFile = path.join(outputDir, `${baseName}.txt`);
+                    await fs.writeFile(outputFile, translated, "utf-8");
+                    await fs.remove(originalFilePath);
+                    console.log(
+                        chalk.green(
+                            `Thành công! File đã được lưu tại: ${outputFile}\n`
+                        )
+                    );
+                    await fs.appendFile(
+                        runLogFile,
+                        `- [${baseName}] Dịch thành công.\n`
+                    );
+                } else {
+                    console.log(
+                        chalk.red(
+                            `- Phát hiện ${issues.length} vấn đề với file "${baseName}.txt"`
+                        )
+                    );
+                    const outputFileMiss = path.join(
+                        missDir,
+                        `${baseName}_miss.txt`
+                    );
+                    const outputFileMissLog = path.join(
+                        missDir,
+                        `${baseName}_miss_log.txt`
+                    );
+
+                    await fs.writeFile(outputFileMiss, translated, "utf-8");
+                    console.log(
+                        chalk.red(`- Bản dịch có vấn đề: ${outputFileMiss}`)
+                    );
+
+                    await fs.writeFile(
+                        outputFileMissLog,
+                        issues.join("\n") + "\n",
+                        "utf-8"
+                    );
+                    console.log(
+                        chalk.red(
+                            `- Đã ghi các vấn đề vào: ${outputFileMissLog}`
+                        )
+                    );
+                    await fs.appendFile(
+                        runLogFile,
+                        `- [${baseName}] Dịch thất bại (${issues.length} vấn đề).\n`
+                    );
+                }
             }
         }
-
-        // tính tổng thời gian toàn bộ chương trình
-        const overallElapsed = Date.now() - processStart;
 
         // Tổng kết
+        const overallElapsed = Date.now() - processStart;
+        console.log(chalk.green.bold(`\n\n--- TỔNG KẾT ---`));
+        console.log(chalk.green(`Hoàn tất toàn bộ quá trình!`));
         console.log(
             chalk.green(
-                `Hoàn thành! ${successCount} thành công, ${failCount} thất bại trong tổng ${txtFiles.length} file.`
+                `Tổng thời gian thực thi: ${formatDuration(overallElapsed)}`
             )
         );
-
-        console.log(
-            chalk.green(
-                `Tổng thời gian toàn bộ chương trình (bao gồm I/O, khởi tạo, v.v.): ${formatDuration(
-                    overallElapsed
-                )}`
-            )
-        );
+        console.log(chalk.white(`Chi tiết log tại: ${runLogFile}`));
     } catch (error) {
-        console.error(error.message || error);
+        console.error(
+            chalk.red.bold("\nLỖI NGHIÊM TRỌNG TRONG QUÁ TRÌNH THỰC THI:"),
+            error
+        );
     }
 }
 
