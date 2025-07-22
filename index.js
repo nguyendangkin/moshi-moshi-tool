@@ -193,35 +193,32 @@ async function main() {
             chalk.cyan("\n=== BẮT ĐẦU QUÁ TRÌNH DỊCH VÀ GHÉP FILE ===")
         );
 
-        // 1. Lấy danh sách "baseName" - FIX: Lọc bỏ các file miss và log
+        // 1. Lấy danh sách "baseName" - CHỈ lấy projects thật sự
         const projects = new Set();
         const filesInRaw = await fs.readdir(inputDir).catch(() => []);
         const allChunks = await fs.readdir(rawTextTempChunks).catch(() => []);
         const allMisses = await fs.readdir(missDir).catch(() => []);
 
-        // Chỉ lấy file .txt gốc từ inputDir
+        // Lấy file .txt gốc từ inputDir
         filesInRaw
             .filter((f) => f.endsWith(".txt"))
             .forEach((f) => projects.add(path.basename(f, ".txt")));
 
-        // Lấy baseName từ chunks (không bao gồm miss files)
-        allChunks.forEach((f) => {
-            const baseName = f.split("_chunk_")[0];
-            projects.add(baseName);
-        });
-
-        // FIX: Lấy baseName từ miss files (loại bỏ _miss và _miss_log)
-        allMisses
-            .filter((f) => f.endsWith("_miss.txt")) // chỉ lấy file miss, không lấy log
+        // Lấy baseName từ chunk files (CHỈ project gốc, không phải chunk riêng lẻ)
+        allChunks
+            .filter((f) => f.includes("_chunk_"))
             .forEach((f) => {
-                let baseName = f.replace("_miss.txt", "");
-                // Nếu là chunk miss
-                if (baseName.includes("_chunk_")) {
-                    baseName = baseName.split("_chunk_")[0];
-                }
+                const baseName = f.split("_chunk_")[0];
                 projects.add(baseName);
             });
 
+        // Lấy baseName từ miss files của PROJECT (không phải chunk miss)
+        allMisses
+            .filter((f) => f.endsWith("_miss.txt") && !f.includes("_chunk_"))
+            .forEach((f) => {
+                const baseName = f.replace("_miss.txt", "");
+                projects.add(baseName);
+            });
         if (projects.size === 0) {
             console.log(
                 chalk.yellow(
@@ -247,7 +244,7 @@ async function main() {
             const originalFilePath = path.join(inputDir, `${baseName}.txt`);
             const fileExists = await fs.pathExists(originalFilePath);
 
-            // FIX: Kiểm tra file miss (cho file nhỏ)
+            // Kiểm tra file miss (cho file nhỏ)
             const smallFileMissPath = path.join(
                 missDir,
                 `${baseName}_miss.txt`
@@ -322,20 +319,16 @@ async function main() {
                     );
                 }
 
-                // FIX: Cấu hình retry miss chunks
-                const RETRY_MISS_THIS_RUN = true; // Đổi thành true để retry
-
+                // FIX: KHÔNG DỊCH LẠI MISS CHUNKS - chỉ dịch chunk mới
                 const chunksToProcess = [
                     ...chunksInRaw.map((f) => path.join(rawTextTempChunks, f)),
-                    ...(RETRY_MISS_THIS_RUN
-                        ? chunksInMiss.map((f) => path.join(missDir, f))
-                        : []),
+                    // Bỏ phần retry miss chunks
                 ];
 
                 if (chunksToProcess.length > 0) {
                     console.log(
                         chalk.yellow(
-                            `Cần dịch/dịch lại ${chunksToProcess.length} chunk...`
+                            `Cần dịch ${chunksToProcess.length} chunk...`
                         )
                     );
                     for (const chunkPath of chunksToProcess) {
@@ -409,26 +402,8 @@ async function main() {
                     );
                 }
             }
-            // 6. File nhỏ - FIX: Thêm logic xử lý file miss
-            else if (fileExists || hasSmallFileMiss) {
-                if (hasSmallFileMiss && !fileExists) {
-                    console.log(
-                        chalk.cyan(`Dự án file nhỏ có lỗi. Bắt đầu dịch lại...`)
-                    );
-
-                    // Đọc nội dung từ file gốc (nếu còn) hoặc từ file miss
-                    // Chú ý: cần có logic để lấy lại nội dung gốc
-                    console.log(
-                        chalk.red(
-                            `CẢNH BÁO: Không tìm thấy file gốc "${baseName}.txt" để dịch lại file miss.`
-                        )
-                    );
-                    console.log(
-                        chalk.yellow(`Bỏ qua file miss: ${smallFileMissPath}`)
-                    );
-                    continue;
-                }
-
+            // 6. File nhỏ - CHỈ dịch file gốc, KHÔNG dịch lại miss
+            else if (fileExists) {
                 console.log(
                     chalk.cyan(`Dự án file nhỏ. Bắt đầu dịch trực tiếp...`)
                 );
@@ -485,11 +460,9 @@ async function main() {
                 if (issues.length === 1 && issues[0].startsWith("OKE:")) {
                     const outputFile = path.join(outputDir, `${baseName}.txt`);
                     await fs.writeFile(outputFile, translated, "utf-8");
-
-                    // FIX: CHỈ XÓA FILE GỐC KHI DỊCH THÀNH CÔNG
                     await fs.remove(originalFilePath);
 
-                    // FIX: Xóa file miss cũ nếu có
+                    // Xóa file miss cũ nếu có
                     if (hasSmallFileMiss) {
                         await fs.remove(smallFileMissPath).catch(() => {});
                         const missLogPath = path.join(
@@ -544,7 +517,6 @@ async function main() {
                         )
                     );
 
-                    // FIX: KHÔNG XÓA FILE GỐC KHI DỊCH THẤT BẠI - giữ để dịch lại lần sau
                     console.log(
                         chalk.yellow(
                             `-> Giữ file gốc "${baseName}.txt" để dịch lại lần sau.`
@@ -557,6 +529,7 @@ async function main() {
                     );
                 }
             }
+            // FIX: BỎ HOÀN TOÀN phần xử lý file miss riêng lẻ
         }
 
         // Tổng kết
