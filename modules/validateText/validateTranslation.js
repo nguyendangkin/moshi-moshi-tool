@@ -4,6 +4,16 @@ function validateTranslationImproved(content, translated) {
 
     const issues = [];
 
+    function canonicalSquareTag(tag) {
+        const inner = tag.slice(1, -1).trim();
+        // STRICT: toàn A-Z / 0-9 / _ (không khoảng trắng) => giữ nguyên
+        if (/^[A-Z0-9_]+$/.test(inner)) {
+            return tag;
+        }
+        // LOOSE: mọi trường hợp khác (có chữ thường, dấu tiếng Việt, khoảng trắng...)
+        return "[*]";
+    }
+
     function trimTrailingEmptyLines(arr) {
         while (arr.length > 0 && arr[arr.length - 1].trim() === "") {
             arr.pop();
@@ -32,13 +42,15 @@ function validateTranslationImproved(content, translated) {
         return textKeyRegex.test(line);
     }
 
-    // Hàm chuẩn hóa tag: chỉ giữ tên thẻ trước dấu "("
     function canonicalTag(tag) {
         if (tag.startsWith("<")) {
             const inner = tag.slice(1, -1).trim();
             const m = inner.match(/^([A-Za-z0-9_]+)/);
             const name = m ? m[1] : inner;
             return `<${name}>`;
+        }
+        if (tag.startsWith("[") && tag.endsWith("]")) {
+            return canonicalSquareTag(tag);
         }
         return tag;
     }

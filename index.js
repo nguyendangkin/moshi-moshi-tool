@@ -19,6 +19,22 @@ const missDir = path.join(process.cwd(), "trans_miss");
 const logsDir = path.join(process.cwd(), "logs_system");
 const rawTextTempChunks = path.join(process.cwd(), "raw_text_temp_chunks");
 
+async function cleanupMissArtifacts(baseChunkName) {
+    const missFilePath = path.join(
+        missDir,
+        baseChunkName.replace(/(\.\w+)$/, "_miss$1")
+    );
+    const missLogFilePath = path.join(
+        missDir,
+        baseChunkName.replace(/(\.\w+)$/, "_miss_log$1")
+    );
+    await fs.remove(missFilePath).catch(() => {});
+    await fs.remove(missLogFilePath).catch(() => {});
+    console.log(
+        chalk.gray(`-> Đã dọn dẹp các file miss nếu có cho: ${baseChunkName}`)
+    );
+}
+
 /**
  * Xử lý dịch một chunk duy nhất, có khả năng xử lý lại các chunk bị lỗi.
  * @param {string} chunkFilePath - Đường dẫn đến chunk cần xử lý (có thể trong `rawTextTempChunks` hoặc `missDir`).
@@ -109,22 +125,7 @@ async function processChunk(chunkFilePath, fileIndex, originalSizeKB) {
         // Xóa chunk gốc trong temp
         await fs.remove(originalContentPath).catch(() => {});
 
-        // [CẢI TIẾN] Nếu đang xử lý chunk lỗi, dọn dẹp các file trong `missDir`
-        if (isMissedChunk) {
-            const missFilePath = path.join(
-                missDir,
-                baseChunkName.replace(/(\.\w+)$/, "_miss$1")
-            );
-            const missLogFilePath = path.join(
-                missDir,
-                baseChunkName.replace(/(\.\w+)$/, "_miss_log$1")
-            );
-            await fs.remove(missFilePath).catch(() => {});
-            await fs.remove(missLogFilePath).catch(() => {});
-            console.log(
-                chalk.gray(`-> Đã dọn dẹp các file miss cho: ${baseChunkName}`)
-            );
-        }
+        await cleanupMissArtifacts(baseChunkName);
 
         console.log(chalk.green(`Chunk thành công: ${outputChunkFile}`));
         return { success: true, chunkFileName: baseChunkName };
@@ -216,7 +217,13 @@ async function main() {
             return;
         }
 
-        console.log(chalk.blue(`Tìm thấy ${projects.size} dự án.`));
+        // console.log(chalk.blue(`Tìm thấy ${projects.size} dự án.`));
+        // In danh sách file trong inputDir (raw files)
+        const rawTxtFiles = filesInRaw.filter((f) => f.endsWith(".txt"));
+        if (rawTxtFiles.length > 0) {
+            console.log(chalk.green("Tìm thấy các file cần xử lý:"));
+            rawTxtFiles.forEach((file) => console.log(" - " + file));
+        }
 
         // 2. Lặp qua từng dự án
         for (const baseName of projects) {
@@ -249,7 +256,7 @@ async function main() {
             if (fileExists && !isLargeFileProject) {
                 const stats = await fs.stat(originalFilePath);
                 const sizeKB = stats.size / 1024;
-                if (sizeKB > 75) {
+                if (sizeKB > 50) {
                     console.log(
                         chalk.white(
                             `File "${baseName}.txt" lớn (${sizeKB.toFixed(
@@ -284,7 +291,7 @@ async function main() {
                         chalk.gray(`- Chunk chưa dịch: ${chunksInRaw.length}`)
                     );
                     console.log(
-                        chalk.gray(`- Chunk lỗi: ${chunksInMiss.length}`)
+                        chalk.gray(`- Chunk lỗi (file): ${chunksInMiss.length}`)
                     );
                     console.log(
                         chalk.gray(
@@ -293,10 +300,14 @@ async function main() {
                     );
                 }
 
-                // Gom chunk cần dịch lại
+                // Nếu muốn bỏ qua dịch lại miss trong RUN hiện tại:
+                const RETRY_MISS_THIS_RUN = false; // đổi thành true nếu muốn retry
+
                 const chunksToProcess = [
                     ...chunksInRaw.map((f) => path.join(rawTextTempChunks, f)),
-                    ...chunksInMiss.map((f) => path.join(missDir, f)),
+                    ...(RETRY_MISS_THIS_RUN
+                        ? chunksInMiss.map((f) => path.join(missDir, f))
+                        : []),
                 ];
 
                 if (chunksToProcess.length > 0) {
@@ -306,6 +317,7 @@ async function main() {
                         )
                     );
                     for (const chunkPath of chunksToProcess) {
+                        if (!(await fs.pathExists(chunkPath))) continue; // <--- thêm dòng này
                         await processChunk(chunkPath, 0, 0);
                     }
                 }
@@ -338,7 +350,7 @@ async function main() {
 
                     const mergedFile = await mergeChunksFromFile(
                         outputDir,
-                        originalFilePath,
+                        path.join(outputDir, `${baseName}.txt`),
                         {
                             overwrite: true,
                             mergedDir: outputDir,

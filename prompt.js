@@ -10,6 +10,9 @@ Dịch: SelfId=Txt_DebugMenu_DebugMenu_BattleMode_CharacterLooks_VanishBlink
 Còn ví dụ sai:
 Gốc: SelfId=Txt_DebugMenu_DebugMenu_BattleMode_CharacterLooks_VanishBlink
 Dịch: SelfId=T_DebugMenu_DebugMenu_BattleMode_CharacterLooks_VanishBlink
+Hoặc thêm 1 ví dụ sai khác:
+Gốc: SelfId=Txt_StaffRoll_Staff_va_07400
+Dịch: SelfId=T_StaffRoll_Staff_va_07400
 Hoặc thêm một ví dụ sai tiếp là:
 Gốc: SelfId=Txt_StaffRoll_h3_SA_AssistantSoundEditors
 Dịch: SelfId=Txt_S_StaffRoll_h3_SA_AssistantSoundEditors
@@ -28,7 +31,7 @@ Gốc: Text=<Cap><IfSuffix_ACTOR(<Sgl_ACTOR>,<DefSgl_ACTOR>)> sets <IfGender_ACT
 Dịch: Text=<Cap><IfSuffix_ACTOR(<Sgl_ACTOR>,<DefSgl_ACTOR>)> nhắm vào điểm yếu của <IfSuffix_TARGET(<Sgl_TARGET>,<DefSgl_TARGET>)>!
 <IfGender_ACTOR(his,her,its)> là một tag có điều kiện, có tham số. Vì vậy, hãy dịch các từ tiếng anh đó theo ngữ cảnh, không để nguyên hay loại bỏ.
 16. Các loại như <IfSing_VALUE3(<IfGender_TARGET(his,her,its)>,their)> v.v.  là một tag có điều kiện, có tham số. Vì vậy, hãy dịch các từ tiếng anh đó theo ngữ cảnh, không để nguyên hay loại bỏ.
-17. <IfGender_ACTOR(his,her,its)> là một tag có điều kiện, có tham số. Vì vậy, hãy dịch các từ tiếng anh đó theo ngữ cảnh, không để nguyên hay loại bỏ.
+17. <IfGender_ACTOR(his,her,its)> là một tag có điều kiện, có tham số. Vì vậy, hãy dịch các từ tiếng anh đó theo ngữ cảnh, tuyệt đối không để nguyên hay loại bỏ trong bản dịch.
 19. Text=<ERROR!> phải để nguyên, không có dịch. Đây là một ví dụ sai: 
 Gốc: Text=<ERROR!> 
 Dịch: Text=Kiếm Đồng
@@ -38,9 +41,15 @@ Dịch: Text=<ERROR!>
 20. <IfPlrNoun_I_NAME(them,it)> v.v. cũng là 1 tag có điều kiện, có tham số. Vì vậy, hãy dịch các từ tiếng anh đó theo ngữ cảnh, không để nguyên hay loại bỏ. Dưới đây là một ví dụ sai:
 Gốc: Text=Just so you know, the curse placed on <IfPlrNoun_I_NAME(these mean,this means)> you won't be able to get rid of <IfPlrNoun_I_NAME(them,it)> easily after equipping <IfPlrNoun_I_NAME(them,it)>.
 Dịch: Text=Để cậu biết, lời nguyền trên <IfPlrNoun_I_NAME(những món này có nghĩa là,món này có nghĩa là)> cậu sẽ không thể dễ dàng loại bỏ <IfPlrNoun_I_NAME(chúng,nó)> sau khi trang bị.
-21. <IfGender_TARGET(him,her,it)> và cũng như các loại khác, <IfGender_ACTOR(his,her,its)> v.v. là một tag có điều kiện, có tham số. Vì vậy, hãy dịch các từ tiếng anh đó theo ngữ cảnh, không để nguyên hay loại bỏ. Dưới đây là một ví dụ sai:
+21. <IfGender_TARGET(him,her,it)> hoặc <IfGender_ACTOR(his,her,its)> v.v. là một tag có điều kiện, có tham số. Vì vậy, hãy dịch các từ tiếng anh đó theo ngữ cảnh, tuyệt đối không để nguyên hay loại bỏ khỏi dòng đó trong bản dịch. Dưới đây là một ví dụ sai, thiếu <IfGender_TARGET(him,her,it)> ở dòng của bản dịch:
 Gốc: Text=<Cap><DefSgl_TARGET> thumbs through the pages of <Sgl_I_NAME>...<KEY_WAIT><cf><6>Good luck and bad luck are mere constructs. Change your outlook, and your luck, too, will change.<9><KEY_WAIT><cf>The scales fall from <DefSgl_TARGET>'s eyes, and suddenly the secrets of getting 110% out of life are clear to <IfGender_TARGET(him,her,it)>!
 Dịch: Text=<Cap><DefSgl_TARGET> lật xem các trang của <Sgl_I_NAME>...<KEY_WAIT><cf><6>May mắn và xui xẻo chỉ là do mình tự tạo ra. Thay đổi cách nhìn, vận may của bạn cũng sẽ thay đổi.<9><KEY_WAIT><cf>Như được khai sáng, <DefSgl_TARGET> đột nhiên hiểu rõ những bí quyết để sống trọn vẹn 110% cuộc đời!
+Nhắc lại: Tuyệt đối Không được bỏ qua <IfGender_TARGET(him,her,it)> hoặc <IfGender_ACTOR(his,her,its)> trong dòng của bản dịch, nếu trong dòng của bản gốc có. 
+22. Tuyệt đối không lược bỏ đi <---> trong bản dịch, trong dòng. Ví dụ sai về việc lược bỏ <---> ở dòng của bản dịch:
+Gốc: Text=*: No, if there's something you think you'll need in a fight, best to keep it on your<--->or a companion's<--->person!
+Dịch: Text=*: Không, nếu có thứ gì đó cậu nghĩ sẽ cần trong một trận chiến, tốt nhất là nên giữ nó trên người cậu<--->hoặc một người bạn đồng hành!
+
+
 Cuối cùng: Kiểm tra lại bản dịch của bạn để đảm bảo tuân thủ các quy tắc trên không. Nếu không thì hãy làm lại, đúng theo các quy tắc trên. 
 --- BẮT ĐẦU NỘI DUNG CẦN VIỆT HÓA ---
 ${content}
