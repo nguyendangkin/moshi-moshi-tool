@@ -4,4 +4,4 @@
 /trans_text/
 /logs_system/
 /raw_text_temp_chunks/
-.env*
+.env
