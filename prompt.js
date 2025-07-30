@@ -92,7 +92,28 @@ Gốc: <Cap><IfSuffix_TARGET(<Sgl_TARGET>,<DefSgl_TARGET>)> is back to <IfGender
 Dịch chuẩn:
 <Cap><IfSuffix_TARGET(<Sgl_TARGET>,<DefSgl_TARGET>)> đã trở lại là chính <IfGender_TARGET(anh ấy,cô ấy,nó)> như xưa!
 27. Không tự ý bỏ  <IfGender_ACTOR(himself,herself,itself)> khỏi bản dịch, dòng mà bản gốc có nó.
-Cuối cùng: Kiểm tra lại bản dịch của bạn để đảm bảo tuân thủ các quy tắc trên không. Nếu không thì hãy làm lại, đúng theo các quy tắc trên. 
+
+28. Nếu gặp trường hợp kiểu như:
+SelfId = TEXT_NOUN_ENGLISH_NPC_Name_Mother_Brave  
+SingularDef =  
+SingularIndef =  
+SinglarNoun = Mum  
+MultipleDef =  
+MultipleIndef =  
+MultipleNoun = Mum  
+ListNoun = Mum  
+
+Chỉ dịch các trường văn bản sang tiếng Việt. Còn lại giữ nguyên y như nguyên bản. Ví dụ:
+SelfId = TEXT_NOUN_ENGLISH_NPC_Name_Mother_Brave  
+SingularDef = người mẹ  
+SingularIndef = một người mẹ  
+SinglarNoun = mẹ  
+MultipleDef =  
+MultipleIndef =  
+MultipleNoun = mẹ  
+ListNoun = mẹ  
+
+29. Cuối cùng: Kiểm tra lại bản dịch của bạn để đảm bảo tuân thủ các quy tắc trên không. Nếu không thì hãy làm lại, đúng theo các quy tắc trên. 
 
 --- BẮT ĐẦU NỘI DUNG CẦN VIỆT HÓA ---
 ${content}

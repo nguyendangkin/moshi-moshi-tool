@@ -266,6 +266,38 @@ function validateTranslationImproved(content, translated) {
                 }: Có vấn đề về Text=\nGốc: ${oLine}\nDịch: ${tLine}\n\n`
             );
         }
+
+        // update check cái kia
+        const fieldRegex = /^\s*([A-Za-z0-9_]+)\s*=\s*(.*)$/;
+        const oMatch = oLine.match(fieldRegex);
+        const tMatch = tLine.match(fieldRegex);
+
+        if (oMatch && tMatch) {
+            const keyO = oMatch[1];
+            const valO = oMatch[2].trim();
+            const keyT = tMatch[1];
+            const valT = tMatch[2].trim();
+
+            if (keyO === keyT) {
+                const mustPreserveFields = [
+                    "SelfId",
+                    "GenderType",
+                    "PlrNounFlag",
+                    "ProperNounFlag",
+                ];
+
+                // Chỉ kiểm tra các field cần giữ nguyên
+                if (mustPreserveFields.includes(keyO)) {
+                    if (valO !== valT) {
+                        issues.push(
+                            `Dòng ${
+                                i + 1
+                            }: Trường "${keyO}" bị thay đổi sai\nGốc: ${valO}\nDịch: ${valT}\n\n`
+                        );
+                    }
+                }
+            }
+        }
     }
 
     return issues.length > 0 ? issues : ["OKE: Tất cả đều khớp!"];

@@ -91,6 +91,7 @@ async function gemini(prompt, retries = 3, delay = 5000, jitter = 0.25) {
                 rotateKey(); // Chuyển sang key khác
             } else if (error.status === 503) {
                 console.error("Gemini đang quá tải (503 Service Unavailable).");
+                rotateKey(); // Chuyển sang key khác
             } else {
                 console.error(error.message || error);
                 rotateKey(); // Chuyển sang key khác
