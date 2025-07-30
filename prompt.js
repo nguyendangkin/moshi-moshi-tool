@@ -94,26 +94,30 @@ Dịch chuẩn:
 27. Không tự ý bỏ  <IfGender_ACTOR(himself,herself,itself)> khỏi bản dịch, dòng mà bản gốc có nó.
 
 28. Nếu gặp trường hợp kiểu như:
-SelfId = TEXT_NOUN_ENGLISH_NPC_Name_Mother_Brave  
-SingularDef =  
-SingularIndef =  
-SinglarNoun = Mum  
-MultipleDef =  
-MultipleIndef =  
-MultipleNoun = Mum  
-ListNoun = Mum  
+SelfId=TEXT_NOUN_ENGLISH_Item_Name_Staff_Of_Antimagic
+SingularDef=the 
+SingularIndef=a 
+SinglarNoun=staff of antimagic
+MultipleDef=the 
+MultipleIndef=some 
+MultipleNoun=staves of antimagic
+ListNoun=Staff of Antimagic
 
-Chỉ dịch các trường văn bản sang tiếng Việt. Còn lại giữ nguyên y như nguyên bản. Ví dụ:
-SelfId = TEXT_NOUN_ENGLISH_NPC_Name_Mother_Brave  
-SingularDef = người mẹ  
-SingularIndef = một người mẹ  
-SinglarNoun = mẹ  
-MultipleDef =  
-MultipleIndef =  
-MultipleNoun = mẹ  
-ListNoun = mẹ  
+Khi dịch các thành phần trong hệ thống localization của game, cần hiểu rõ vai trò riêng của từng phần để đảm bảo bản dịch hiển thị tự nhiên khi được ghép lại trong game. Trường "SingularIndef" tương ứng với mạo từ không xác định ở số ít, thường là "a" trong tiếng Anh, nên được dịch sang tiếng Việt là "một". Trường "SingularDef" là mạo từ xác định, tương đương "the", có thể dịch thành "cái", "cây", "chiếc" hoặc đôi khi bỏ qua tùy vào ngữ cảnh. Trường "SinglarNoun" là danh từ chính, nên dịch là tên vật phẩm như "trượng kháng phép", "kiếm lửa", và không kèm theo bất kỳ mạo từ nào. Với danh từ số nhiều, "MultipleIndef" (tương ứng "some") nên được dịch là "vài" hoặc "một vài", còn "MultipleDef" (tương ứng "the") nên dịch là "những". Trường "MultipleNoun" là dạng số nhiều của danh từ, nhưng trong tiếng Việt thường giống với danh từ số ít, vì số nhiều được thể hiện qua mạo từ đi kèm. Nguyên tắc quan trọng nhất là dịch từng phần ngắn gọn, đúng chức năng và tuyệt đối không gộp cụm đầy đủ vào một trường duy nhất, nhằm tránh lỗi hiển thị lặp từ khi game tự động ráp các phần lại thành câu hoàn chỉnh. Nên nhớ ở những mạo từ, từ xác định nên giữ nguyên 'dấu khoảng trắng' ở cuối từ như định dạng gốc, khoảng trắng ở cuối từ đó giúp tránh trường hợp engine nối lại thì nó bị dính sát vào nhau.
+Chỉ dịch các trường có văn bản tiếng anh, sang tiếng Việt. Còn lại giữ nguyên y như nguyên bản. Ví dụ:
 
-29. Cuối cùng: Kiểm tra lại bản dịch của bạn để đảm bảo tuân thủ các quy tắc trên không. Nếu không thì hãy làm lại, đúng theo các quy tắc trên. 
+SelfId=TEXT_NOUN_ENGLISH_Item_Name_Staff_Of_Antimagic
+SingularDef=cây 
+SingularIndef=một 
+SinglarNoun=trượng kháng phép
+MultipleDef=những 
+MultipleIndef=vài 
+MultipleNoun=trượng kháng phép
+ListNoun=Trượng Kháng Phép
+
+29. Những cái tên riêng hay tên địa danh riêng mà nó dạng "từ chế" không có trong tiếng anh (không thể dịch được) thì không cần dịch. Còn lại dịch được thì cứ dịch sang tiếng việt.
+
+Cuối cùng: Kiểm tra lại bản dịch của bạn để đảm bảo tuân thủ các quy tắc trên không. Nếu không thì hãy làm lại, đúng theo các quy tắc trên. 
 
 --- BẮT ĐẦU NỘI DUNG CẦN VIỆT HÓA ---
 ${content}
